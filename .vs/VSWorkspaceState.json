@@ -1,0 +1,15 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\client",
+    "\\client\\public",
+    "\\client\\src",
+    "\\client\\src\\components",
+    "\\client\\src\\pages",
+    "\\client\\src\\services",
+    "\\server",
+    "\\server\\app"
+  ],
+  "SelectedNode": "\\server\\app\\views.py",
+  "PreviewInSolutionExplorer": false
+}

@@ -1,5 +1,5 @@
 """
-File: routes.py
+File: views.py
 Description: Defines the routes for the Kennel Management System Flask application.
 Author: Kendall Levy
 Date: 6/7/2024
@@ -25,3 +25,4 @@ def index():
     Route handler for the home page.
     """
     return 'Welcome to the Kennel Management System!'
+
