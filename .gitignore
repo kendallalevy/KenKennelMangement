@@ -20,3 +20,6 @@ instance/
 
 # Dependency directories
 node_modules/
+
+# Visual Studio
+.vs/
