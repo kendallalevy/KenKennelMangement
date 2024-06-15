@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %} Home {% endblock %}
+
+{% block content %}
+
+  <div class="container-fluid">
+    <input type="button" onClick="goToGetDog()" value="GetDog"/>
+    <script>
+      function goToGetDog() {
+        window.location.href = "getdog";
+      }
+    </script>
+  </div>
+{% endblock %}
