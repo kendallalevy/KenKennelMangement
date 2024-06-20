@@ -9,6 +9,7 @@
 ** PR	Date		Author		Description
 ** 1	6/9/24		Kendall		Created all tables for schema
 ** 2	6/13/24		Kendall		Inserted dummy data for tables
+** 3	6/18/24		Kendall		Removed CUSTOMER_ADDRESS
 ******************************/
 USE master;
 GO
@@ -21,6 +22,7 @@ IF  EXISTS (
 )
 DROP DATABASE KenKennel;
 GO
+
 
 CREATE DATABASE KenKennel;
 GO
@@ -39,7 +41,6 @@ ACTIVITY,
 BELONGING,
 DOG,
 RUN,
-CUSTOMER_ADDRESS,
 [ADDRESS],
 RUN_TYPE,
 BUILDING,
@@ -367,7 +368,7 @@ GO
 
 	Columns:
 	- PhoneNumID: unique identifier for each number
-	- Num: The number
+	- Num: The number, must be unique
 
 	Constraints:
 	- PhoneNumID: PK
@@ -376,7 +377,7 @@ CREATE TABLE dbo.PHONE_NUM
 (
 	PhoneNumID int IDENTITY NOT NULL, 
 	CustID INT NULL,
-	Num varchar(11) NOT NULL,
+	Num varchar(11) UNIQUE NOT NULL,
     CONSTRAINT PK_phoneNum PRIMARY KEY (PhoneNumID),
 	CONSTRAINT FK_customer_phoneNum FOREIGN KEY (CustID) REFERENCES dbo.CUSTOMER (CustID)
 );
@@ -504,18 +505,18 @@ GO
 
     Constraints:
     - BelongingID: PK
-    - DogID: FK referencing DOG
+    - VistID: FK referencing VISIT
     - BelongingTypeID: FK referencing BELONGING_TYPE
 */
 CREATE TABLE dbo.BELONGING
 (
     BelongingID int IDENTITY NOT NULL,
-    DogID int NOT NULL,
+    VisitID int NOT NULL,
     BelongingTypeID int NOT NULL,
     BelongingDescr varchar(50) NULL,
     CONSTRAINT PK_belonging PRIMARY KEY (BelongingID),
-    CONSTRAINT FK_belonging_dog FOREIGN KEY (DogID) REFERENCES dbo.DOG (DogID),
-    CONSTRAINT FK_belonging_belongingType FOREIGN KEY (BelongingTypeID) REFERENCES dbo.BELONGING_TYPE (BelongingTypeID)
+	CONSTRAINT FK_belonging_visit FOREIGN KEY (VisitID) REFERENCES VISIT,
+    CONSTRAINT FK_belonging_belongingType FOREIGN KEY (BelongingTypeID) REFERENCES BELONGING_TYPE (BelongingTypeID)
 );
 GO
 
@@ -580,6 +581,7 @@ GO
 
     Columns:
     - AddressID: unique identifier for each address
+	- CustID: ID of the customer this address is associated with
     - StateID: ID of the state
     - AddressTypeID: ID of the address type
     - AddressLine1: First line of the address
@@ -589,12 +591,14 @@ GO
 
     Constraints:
     - AddressID: PK
+	- CustID: FK referencesing CUSTOMER
     - StateID: FK referencing STATE
     - AddressTypeID: FK referencing ADDRESS_TYPE
 */
 CREATE TABLE dbo.[ADDRESS]
 (
     AddressID int IDENTITY NOT NULL,
+	CustID INT NULL,
     StateID int NOT NULL,
     AddressTypeID int NULL,
     AddressLine1 varchar(100) NOT NULL,
@@ -602,36 +606,12 @@ CREATE TABLE dbo.[ADDRESS]
     City varchar(50) NOT NULL,
     Zip varchar(20) NOT NULL,
     CONSTRAINT PK_address PRIMARY KEY (AddressID),
-    CONSTRAINT FK_address_state FOREIGN KEY (StateID) REFERENCES dbo.STATE (StateID),
-    CONSTRAINT FK_address_addressType FOREIGN KEY (AddressTypeID) REFERENCES dbo.ADDRESS_TYPE (AddressTypeID)
+	CONSTRAINT FK_address_customer FOREIGN KEY (CustID) REFERENCES CUSTOMER (CustID),
+    CONSTRAINT FK_address_state FOREIGN KEY (StateID) REFERENCES [STATE] (StateID),
+    CONSTRAINT FK_address_addressType FOREIGN KEY (AddressTypeID) REFERENCES ADDRESS_TYPE (AddressTypeID)
 );
 GO
 
-/*
-    Table: CUSTOMER_ADDRESS
-
-    Description: Stores information about addresses associated with customers.
-
-    Columns:
-    - CustAddressID: unique identifier for each customer address
-    - AddressID: ID of the address
-    - CustID: ID of the customer
-
-    Constraints:
-    - CustAddressID: PK
-    - AddressID: FK referencing ADDRESS
-    - CustID: FK referencing CUSTOMER
-*/
-CREATE TABLE dbo.CUSTOMER_ADDRESS
-(
-    CustAddressID int IDENTITY NOT NULL,
-    AddressID int NOT NULL,
-    CustID int NOT NULL,
-    CONSTRAINT PK_customer_address PRIMARY KEY (CustAddressID),
-    CONSTRAINT FK_customerAddress_address FOREIGN KEY (AddressID) REFERENCES dbo.ADDRESS (AddressID),
-    CONSTRAINT FK_customerAddress_customer FOREIGN KEY (CustID) REFERENCES dbo.CUSTOMER (CustID)
-);
-GO
 
 /*
     Table: MEDICATION
@@ -789,60 +769,6 @@ VALUES
 GO
 
 
-DECLARE @StateID int = (SELECT StateID FROM dbo.STATE WHERE StateName = 'Washington');
-DECLARE @BillingID int = (SELECT AddressTypeID FROM dbo.ADDRESS_TYPE WHERE AddressTypeName = 'Billing');
-DECLARE @HomeID int = (SELECT AddressTypeID FROM dbo.ADDRESS_TYPE WHERE AddressTypeName = 'Home');
-DECLARE @BusinessID int = (SELECT AddressTypeID FROM dbo.ADDRESS_TYPE WHERE AddressTypeName = 'Business');
-
-INSERT INTO dbo.[ADDRESS] (StateID, AddressTypeID, AddressLine1, AddressLine2, City, Zip)
-VALUES
-    (@StateID, @BillingID, '123 Maple St', NULL, 'Woodinville', '98072'),
-    (@StateID, @HomeID, '456 Oak Ave', 'Apt 2', 'Woodinville', '98072'),
-    (@StateID, @BusinessID, '789 Pine Ln', NULL, 'Woodinville', '98072'),
-    (@StateID, @BillingID, '101 Birch St', 'Suite 300', 'Woodinville', '98072'),
-    (@StateID, @HomeID, '202 Cedar Dr', NULL, 'Woodinville', '98072'),
-    (@StateID, @BusinessID, '303 Spruce Ct', NULL, 'Woodinville', '98072'),
-    (@StateID, @BillingID, '404 Fir Rd', NULL, 'Woodinville', '98072'),
-    (@StateID, @HomeID, '505 Redwood Pl', NULL, 'Woodinville', '98072'),
-    (@StateID, @BusinessID, '606 Sequoia Blvd', NULL, 'Woodinville', '98072'),
-    (@StateID, @BillingID, '707 Palm Way', NULL, 'Woodinville', '98072'),
-    (@StateID, @HomeID, '808 Elm St', NULL, 'Woodinville', '98072'),
-    (@StateID, @BusinessID, '909 Ash Ln', NULL, 'Woodinville', '98072'),
-    (@StateID, @BillingID, '110 Maple St', NULL, 'Bothell', '98011'),
-    (@StateID, @HomeID, '111 Oak Ave', 'Apt 3', 'Bothell', '98011'),
-    (@StateID, @BusinessID, '112 Pine Ln', NULL, 'Bothell', '98011'),
-    (@StateID, @BillingID, '113 Birch St', 'Suite 301', 'Bothell', '98011'),
-    (@StateID, @HomeID, '114 Cedar Dr', NULL, 'Bothell', '98011'),
-    (@StateID, @BusinessID, '115 Spruce Ct', NULL, 'Bothell', '98011'),
-    (@StateID, @BillingID, '116 Fir Rd', NULL, 'Bothell', '98011'),
-    (@StateID, @HomeID, '117 Redwood Pl', NULL, 'Bothell', '98011'),
-    (@StateID, @BusinessID, '118 Sequoia Blvd', NULL, 'Bothell', '98011'),
-    (@StateID, @BillingID, '119 Palm Way', NULL, 'Redmond', '98052'),
-    (@StateID, @HomeID, '120 Elm St', NULL, 'Redmond', '98052'),
-    (@StateID, @BusinessID, '121 Ash Ln', NULL, 'Redmond', '98052'),
-    (@StateID, @BillingID, '122 Maple St', NULL, 'Redmond', '98052'),
-    (@StateID, @HomeID, '123 Oak Ave', 'Apt 4', 'Redmond', '98052'),
-    (@StateID, @BusinessID, '124 Pine Ln', NULL, 'Redmond', '98052'),
-    (@StateID, @BillingID, '125 Birch St', 'Suite 302', 'Redmond', '98052'),
-    (@StateID, @HomeID, '126 Cedar Dr', NULL, 'Redmond', '98052'),
-    (@StateID, @BusinessID, '127 Spruce Ct', NULL, 'Redmond', '98052'),
-    (@StateID, @BillingID, '128 Fir Rd', NULL, 'Kirkland', '98033'),
-    (@StateID, @HomeID, '129 Redwood Pl', NULL, 'Kirkland', '98033'),
-    (@StateID, @BusinessID, '130 Sequoia Blvd', NULL, 'Kirkland', '98033'),
-    (@StateID, @BillingID, '131 Palm Way', NULL, 'Kirkland', '98033'),
-    (@StateID, @HomeID, '132 Elm St', NULL, 'Kirkland', '98033'),
-    (@StateID, @BusinessID, '133 Ash Ln', NULL, 'Kirkland', '98033'),
-    (@StateID, @BillingID, '134 Maple St', NULL, 'Snohomish', '98290'),
-    (@StateID, @HomeID, '135 Oak Ave', 'Apt 5', 'Snohomish', '98290'),
-    (@StateID, @BusinessID, '136 Pine Ln', NULL, 'Snohomish', '98290'),
-    (@StateID, @BillingID, '137 Birch St', 'Suite 303', 'Snohomish', '98290'),
-    (@StateID, @HomeID, '138 Cedar Dr', NULL, 'Snohomish', '98290'),
-    (@StateID, @BusinessID, '139 Spruce Ct', NULL, 'Snohomish', '98290'),
-    (@StateID, @BillingID, '140 Fir Rd', NULL, 'Snohomish', '98290'),
-    (@StateID, @HomeID, '141 Redwood Pl', NULL, 'Snohomish', '98290'),
-    (@StateID, @BusinessID, '142 Sequoia Blvd', NULL, 'Snohomish', '98290');
-GO
-
 INSERT INTO dbo.CUSTOMER (FName, LName, Email)
 VALUES
     ('John', 'Doe', 'john.doe@example.com'),
@@ -897,6 +823,60 @@ VALUES
     ('Mila', 'Morris', 'mila.morris@example.com');
 GO
 
+DECLARE @StateID int = (SELECT StateID FROM dbo.STATE WHERE StateName = 'Washington');
+DECLARE @BillingID int = (SELECT AddressTypeID FROM dbo.ADDRESS_TYPE WHERE AddressTypeName = 'Billing');
+DECLARE @HomeID int = (SELECT AddressTypeID FROM dbo.ADDRESS_TYPE WHERE AddressTypeName = 'Home');
+DECLARE @BusinessID int = (SELECT AddressTypeID FROM dbo.ADDRESS_TYPE WHERE AddressTypeName = 'Business');
+
+INSERT INTO dbo.[ADDRESS] (CustID, StateID, AddressTypeID, AddressLine1, AddressLine2, City, Zip)
+VALUES
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '123 Maple St', NULL, 'Woodinville', '98072'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '456 Oak Ave', 'Apt 2', 'Woodinville', '98072'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '789 Pine Ln', NULL, 'Woodinville', '98072'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '101 Birch St', 'Suite 300', 'Woodinville', '98072'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '202 Cedar Dr', NULL, 'Woodinville', '98072'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '303 Spruce Ct', NULL, 'Woodinville', '98072'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '404 Fir Rd', NULL, 'Woodinville', '98072'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '505 Redwood Pl', NULL, 'Woodinville', '98072'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '606 Sequoia Blvd', NULL, 'Woodinville', '98072'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '707 Palm Way', NULL, 'Woodinville', '98072'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '808 Elm St', NULL, 'Woodinville', '98072'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '909 Ash Ln', NULL, 'Woodinville', '98072'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '110 Maple St', NULL, 'Bothell', '98011'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '111 Oak Ave', 'Apt 3', 'Bothell', '98011'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '112 Pine Ln', NULL, 'Bothell', '98011'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '113 Birch St', 'Suite 301', 'Bothell', '98011'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '114 Cedar Dr', NULL, 'Bothell', '98011'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '115 Spruce Ct', NULL, 'Bothell', '98011'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '116 Fir Rd', NULL, 'Bothell', '98011'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '117 Redwood Pl', NULL, 'Bothell', '98011'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '118 Sequoia Blvd', NULL, 'Bothell', '98011'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '119 Palm Way', NULL, 'Redmond', '98052'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '120 Elm St', NULL, 'Redmond', '98052'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '121 Ash Ln', NULL, 'Redmond', '98052'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '122 Maple St', NULL, 'Redmond', '98052'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '123 Oak Ave', 'Apt 4', 'Redmond', '98052'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '124 Pine Ln', NULL, 'Redmond', '98052'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '125 Birch St', 'Suite 302', 'Redmond', '98052'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '126 Cedar Dr', NULL, 'Redmond', '98052'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '127 Spruce Ct', NULL, 'Redmond', '98052'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '128 Fir Rd', NULL, 'Kirkland', '98033'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '129 Redwood Pl', NULL, 'Kirkland', '98033'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '130 Sequoia Blvd', NULL, 'Kirkland', '98033'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '131 Palm Way', NULL, 'Kirkland', '98033'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '132 Elm St', NULL, 'Kirkland', '98033'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '133 Ash Ln', NULL, 'Kirkland', '98033'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '134 Maple St', NULL, 'Snohomish', '98290'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '135 Oak Ave', 'Apt 5', 'Snohomish', '98290'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '136 Pine Ln', NULL, 'Snohomish', '98290'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '137 Birch St', 'Suite 303', 'Snohomish', '98290'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '138 Cedar Dr', NULL, 'Snohomish', '98290'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '139 Spruce Ct', NULL, 'Snohomish', '98290'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BillingID, '140 Fir Rd', NULL, 'Snohomish', '98290'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @HomeID, '141 Redwood Pl', NULL, 'Snohomish', '98290'),
+    ((SELECT TOP 1 CustID FROM CUSTOMER ORDER BY NEWID()), @StateID, @BusinessID, '142 Sequoia Blvd', NULL, 'Snohomish', '98290');
+GO
+
 
 INSERT INTO dbo.PHONE_NUM (CustID, Num)
 VALUES
@@ -936,14 +916,6 @@ VALUES
     ((SELECT CustID FROM dbo.CUSTOMER WHERE FName = 'Avery' AND LName = 'Baker'), '4560123456'),
     ((SELECT CustID FROM dbo.CUSTOMER WHERE FName = 'Andrew' AND LName = 'Gonzalez'), '5671234567');
 GO
-
-INSERT INTO dbo.CUSTOMER_ADDRESS (AddressID, CustID)
-SELECT
-    a.AddressID,
-    c.CustID
-FROM
-    (SELECT TOP 10 AddressID FROM dbo.ADDRESS ORDER BY NEWID()) a,
-    (SELECT TOP 10 CustID FROM dbo.CUSTOMER ORDER BY NEWID()) c;
 
 
 INSERT INTO dbo.BREED (BreedName)
@@ -997,7 +969,6 @@ VALUES
 	((SELECT TOP 1 BreedID FROM dbo.BREED ORDER BY NEWID()), (SELECT TOP 1 CustID FROM dbo.CUSTOMER ORDER BY NEWID()), @Neutered, '10 months', 'Karluchio', 'Karl', 20.0, 'Cream', 'Exotic animal vet', 'Likes cheese'),
 	((SELECT TOP 1 BreedID FROM dbo.BREED ORDER BY NEWID()), (SELECT TOP 1 CustID FROM dbo.CUSTOMER ORDER BY NEWID()), @Male, '9 years', 'Tiki', NULL, 50.8, 'Brindle and white', 'The best vet', 'Bad allergies');
 GO
-
 
 INSERT INTO dbo.MED_TYPE (MedTypename, Color)
 VALUES
@@ -1374,6 +1345,7 @@ VALUES
 	(39, 10)
 GO
 
+/*
 INSERT INTO DOG_TAG (DogID, TagID)
 SELECT
     (SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()),
@@ -1383,6 +1355,8 @@ FROM
 CROSS JOIN
     (SELECT TOP 10 * FROM TAG) AS t;
 GO
+*/
+
 
 DECLARE @DHPP INT = (SELECT VaxID FROM VACCINATION WHERE VaxName = 'DHPP');
 DECLARE @Bordetella INT = (SELECT VaxID FROM VACCINATION WHERE VaxName = 'Bordetella');
@@ -1390,20 +1364,20 @@ DECLARE @Rabies INT = (SELECT VaxID FROM VACCINATION WHERE VaxName = 'Rabies');
 DECLARE @ParvoVirus INT = (SELECT VaxID FROM VACCINATION WHERE VaxName = 'Parvo Virus');
 
 DECLARE @CurrentDate DATE = '2024-06-12';
-DECLARE @SixMonthsAgo DATE = DATEADD(MONTH, -6, @CurrentDate);
-DECLARE @ThreeYearsAgo DATE = DATEADD(YEAR, -3, @CurrentDate);
 
 INSERT INTO DOG_VAX (DogID, VaxID, VaxDate)
-SELECT DogID, @DHPP, DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 1095), @CurrentDate) FROM DOG
-UNION ALL
-SELECT DogID, @Bordetella, DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 180), @CurrentDate) FROM DOG
-UNION ALL
-SELECT DogID, @Rabies, DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 1095), @CurrentDate) FROM DOG
-UNION ALL
-SELECT DogID, @ParvoVirus, DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 1095), @CurrentDate) FROM DOG;
+SELECT D.DogID, V.VaxID, @CurrentDate
+FROM DOG D
+CROSS JOIN (SELECT @DHPP AS VaxID
+            UNION ALL
+            SELECT @Bordetella
+            UNION ALL
+            SELECT @Rabies
+            UNION ALL
+            SELECT @ParvoVirus) V;
 GO
 
-
+/*
 DECLARE @Bedding INT = (SELECT BelongingTypeID FROM BELONGING_TYPE WHERE BelongingTypeName = 'Bedding');
 DECLARE @Toy INT = (SELECT BelongingTypeID FROM BELONGING_TYPE WHERE BelongingTypeName = 'Toy');
 DECLARE @Food INT = (SELECT BelongingTypeID FROM BELONGING_TYPE WHERE BelongingTypeName = 'Food');
@@ -1414,23 +1388,25 @@ DECLARE @Restraints INT = (SELECT BelongingTypeID FROM BELONGING_TYPE WHERE Belo
 DECLARE @Crate INT = (SELECT BelongingTypeID FROM BELONGING_TYPE WHERE BelongingTypeName = 'Crate');
 DECLARE @Other INT = (SELECT BelongingTypeID FROM BELONGING_TYPE WHERE BelongingTypeName = 'Other');
 
-INSERT INTO BELONGING (DogID, BelongingTypeID, BelongingDescr)
+INSERT INTO BELONGING (VisitID, BelongingTypeID, BelongingDescr)
 VALUES
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Bedding, 'Green blanket with white bones'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Bedding, 'Grey fuzzy donut bed'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Bedding, 'Black create mat'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Bedding, 'Pink bolster bed'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Bedding, 'Red and blue beach towel'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Toy, 'Lamb Chop'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Toy, 'Unstuffed snake toy'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Toy, 'Y-benebone'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Container, 'Plastic fridge tupperware'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Container, 'Trader joes reusable bag'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Container, 'Large plastic food container with red scoop'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Clothing, 'Puffy red rain jacket'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Restraints, 'C/H/L'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Restraints, 'C/L'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Restraints, 'H/L'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Crate, 'Metal crate'),
-	((SELECT TOP 1 DogID FROM DOG ORDER BY NEWID()), @Crate, 'Plastic crate')
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Bedding, 'Green blanket with white bones'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Bedding, 'Grey fuzzy donut bed'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Bedding, 'Black create mat'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Bedding, 'Pink bolster bed'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Bedding, 'Red and blue beach towel'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Toy, 'Lamb Chop'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Toy, 'Unstuffed snake toy'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Toy, 'Y-benebone'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Container, 'Plastic fridge tupperware'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Container, 'Trader joes reusable bag'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Container, 'Large plastic food container with red scoop'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Clothing, 'Puffy red rain jacket'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Restraints, 'C/H/L'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Restraints, 'C/L'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Restraints, 'H/L'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Crate, 'Metal crate'),
+	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Crate, 'Plastic crate')
 GO
+*/
+
