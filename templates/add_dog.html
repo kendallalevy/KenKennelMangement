@@ -1,0 +1,94 @@
+{% extends "add_base.html" %}
+
+{% block title %}
+Add a New Dog
+{% endblock %}
+
+{% block form %}
+<div class="container mt-5">
+  <h1>Add a New Dog</h1>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="mt-4">
+      {% for category, message in messages %}
+      <div class="alert alert-{{ category }}" role="alert">
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+    <form action="/add_dog" method="post">
+      <h3>Customer</h3>
+      <div class="form-group">
+        <label for="cust_fname">Customer First Name</label>
+        <input type="text" class="form-control" id="cust_fname" name="cust_fname" required>
+      </div>
+      <div class="form-group">
+        <label for="cust_lname">Customer Last Name</label>
+        <input type="text" class="form-control" id="cust_lname" name="cust_lname" required>
+      </div>
+      <h3>Dog Information</h3>
+      <div class="form-group">
+        <label for="name">Name</label>
+        <input type="text" class="form-control" id="name" name="name" required>
+      </div>
+      <div class="form-group">
+        <label for="nickname">Nickname</label>
+        <input type="text" class="form-control" id="nickname" name="nickname">
+      </div>
+      <div class="form-group">
+        <label for="breed_name">Breed Name</label>
+        <input type="text" class="form-control" id="breed_name" name="breed_name">
+      </div>
+      <div class="form-group">
+        <label for="sex">Sex</label>
+        <input type="text" class="form-control" id="sex" name="sex" required>
+      </div>
+      <div class="form-group">
+        <label for="age">Age</label>
+        <input type="text" class="form-control" id="age" name="age" required>
+      </div>
+      <div class="form-group">
+        <label for="weight">Weight (lb)</label>
+        <input type="number" step="0.1" class="form-control" id="weight" name="weight" required>
+      </div>
+      <div class="form-group">
+        <label for="color">Color</label>
+        <input type="text" class="form-control" id="color" name="color" required>
+      </div>
+      <div class="form-group">
+        <label for="vet">Vet</label>
+        <input type="text" class="form-control" id="vet" name="vet">
+      </div>
+      <div class="form-group">
+        <label for="tags">Tags</label>
+        <select class="form-control" id="tags" name="tags" multiple>
+          {% for tag in tags %}
+          <option value="{{tag.TagDescr}}">{{ tag.TagDescr }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <h3>Vaccinations</h3>
+        {% for vax in vaccinations %}
+        <div class="form-row mb-2">
+          <div class="col-sm-3 align-self-center">
+            <label class="mr-2" for="{{ vax }}">{{ vax }}</label>
+          </div>
+          <div class="col-sm-9">
+            <input type="date" class="form-control" id="{{ vax }}" name="{{ vax }}" required>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea class="form-control" id="notes" name="notes"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Dog</button>
+    </form>
+</div>
+{% endblock %}
