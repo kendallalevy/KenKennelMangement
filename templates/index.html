@@ -3,13 +3,11 @@
 {% block title %} Home {% endblock %}
 
 {% block content %}
+<div class="container mt-5">
+  <h1>Welcome to Kennel Management System</h1>
+  <a href="/add_dog" class="btn btn-primary">Add Dog</a>
+  <a href="/add_cust" class="btn btn-primary">Add Customer</a>
+  <a href="/add_visit" class="btn btn-primary">Book a Visit</a>
+</div>
 
-  <div class="container-fluid">
-    <input type="button" onClick="goToGetDog()" value="GetDog"/>
-    <script>
-      function goToGetDog() {
-        window.location.href = "getdog";
-      }
-    </script>
-  </div>
 {% endblock %}

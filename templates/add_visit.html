@@ -1,0 +1,73 @@
+﻿{% extends "add_base.html" %}
+
+{% block title %}
+Book a Visit
+{% endblock %}
+
+{% block form %}
+<div class="container mt-5">
+  <h1>Book a Visit</h1>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="mt-4">
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}" role="alert">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <form action="/add_visit" method="post">
+    <h3>Customer</h3>
+    <select class="selectpicker form-control" data-live-search="true" id="cust_name" name="cust_name" title="Select customer..." required onchange="fetchDogs(this.value)">
+      {% for name in names %}
+      <option value="{{name[0] + ' ' + name[1]}}">{{name[0] + ' ' + name[1]}}</option>
+      {% endfor %}
+    </select>
+
+    <h3>Dog</h3>
+    <select class="selectpicker form-control" data-live-search="true" id="dog_name" name="dog_name" title="Select dog..." required>
+      
+    </select>
+
+    <button type="submit" class="btn btn-primary">Book</button>
+  </form>
+</div>
+
+<script>
+  function fetchDogs(customerName) {
+    fetch(`/get_dogs?customer=${encodeURIComponent(customerName)}`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        const dogSelect = document.getElementById('dog_name');
+        dogSelect.innerHTML = ''; // Clear previous options
+
+        if (data.dogs && data.dogs.length > 0) {
+          data.dogs.forEach(dog => {
+            const option = document.createElement('option');
+            option.value = dog;
+            option.textContent = dog;
+            dogSelect.appendChild(option);
+          });
+        } else {
+          // Handle case where no dogs are found
+          console.log("No dogs found for the selected customer");
+        }
+
+        // Refresh the select picker if using Bootstrap Select
+        if ($('.selectpicker').length) {
+          $('.selectpicker').selectpicker('refresh');
+        }
+      })
+      .catch(error => console.error('Error fetching dogs:', error));
+  }
+
+</script> 
+{% endblock %}

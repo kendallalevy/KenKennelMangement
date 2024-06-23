@@ -1,0 +1,12 @@
+{% extends "editbase.html" %}
+
+{% block title %} Edit Dog {% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+  {% for row in dogarray %}
+    <p>{{row}}</p>
+  {% endfor %}
+</div>
+{% endblock %}

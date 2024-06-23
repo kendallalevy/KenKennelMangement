@@ -8,87 +8,133 @@ Add a New Dog
 <div class="container mt-5">
   <h1>Add a New Dog</h1>
   {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="mt-4">
-      {% for category, message in messages %}
-      <div class="alert alert-{{ category }}" role="alert">
-        {{ message }}
+  {% if messages %}
+  <div class="mt-4">
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}" role="alert">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <form action="/add_dog" method="post">
+    <h3>Customer</h3>
+    <select class="selectpicker form-control" data-live-search="true" id="cust_name" name="cust_name" title="Select customer..."required>
+      {% for name in names %}
+      <option>{{name[0] + ' ' + name[1]}}</option>
+      {% endfor %}
+    </select>
+    <h3>Dog Information</h3>
+    <div class="form-group">
+      <label for="name">Name</label>
+      <input type="text" class="form-control" id="name" name="name" required>
+    </div>
+    <div class="form-group">
+      <label for="nickname">Nickname</label>
+      <input type="text" class="form-control" id="nickname" name="nickname">
+    </div>
+    <div class="form-group">
+      <label for="breed">Breed Name</label>
+      <select class="selectpicker form-control" data-live-search="true" id="breed" name="breed" title="Select breed...">
+        {% for breed in breeds %}
+        <option value="{{ breed }}">{{ breed }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="sex">Sex</label>
+      <select class="selectpicker form-control" id="sex" name="sex" title="Select sex...">
+        {% for sex in sexes %}
+        <option value="{{ sex }}">{{ sex }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="age">Age</label>
+      <input type="text" class="form-control" id="age" name="age" required>
+    </div>
+    <div class="form-group">
+      <label for="weight">Weight (lb)</label>
+      <input type="number" step="0.1" class="form-control" id="weight" name="weight" required>
+    </div>
+    <div class="form-group">
+      <label for="color">Color</label>
+      <input type="text" class="form-control" id="color" name="color" required>
+    </div>
+    <div class="form-group">
+      <label for="vet">Vet</label>
+      <input type="text" class="form-control" id="vet" name="vet">
+    </div>
+    <div class="form-group">
+      <label for="tags">Tags</label>
+      <select class="selectpicker form-control" id="tags" name="tags" multiple title="Select tags...">
+        {% for tag in tags %}
+        <option value="{{ tag.TagDescr }}">{{ tag.TagDescr }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="notes">Notes</label>
+      <textarea class="form-control" id="notes" name="notes"></textarea>
+    </div>
+    <div class="form-group">
+      <h3>Vaccinations</h3>
+      {% for vax in vaccinations %}
+      <div class="form-row mb-2">
+        <div class="col-sm-3 align-self-center">
+          <label class="mr-2" for="{{ vax }}">{{ vax }}</label>
+        </div>
+        <div class="col-sm-9">
+          <input type="date" class="form-control" id="{{ vax }}" name="{{ vax }}" required>
+        </div>
       </div>
       {% endfor %}
     </div>
-    {% endif %}
-  {% endwith %}
+    <div class="form-group">
+      <h3>Medications</h3>
+      <div id="medications-container" class="container-fluid"></div>
+      <button type="button" class="btn btn-secondary" id="add-medication-btn">Add Medication</button>
+    </div>
+    <button type="submit" class="btn btn-primary">Add Dog</button>
+  </form>
+</div>
 
-    <form action="/add_dog" method="post">
-      <h3>Customer</h3>
-      <div class="form-group">
-        <label for="cust_fname">Customer First Name</label>
-        <input type="text" class="form-control" id="cust_fname" name="cust_fname" required>
-      </div>
-      <div class="form-group">
-        <label for="cust_lname">Customer Last Name</label>
-        <input type="text" class="form-control" id="cust_lname" name="cust_lname" required>
-      </div>
-      <h3>Dog Information</h3>
-      <div class="form-group">
-        <label for="name">Name</label>
-        <input type="text" class="form-control" id="name" name="name" required>
-      </div>
-      <div class="form-group">
-        <label for="nickname">Nickname</label>
-        <input type="text" class="form-control" id="nickname" name="nickname">
-      </div>
-      <div class="form-group">
-        <label for="breed_name">Breed Name</label>
-        <input type="text" class="form-control" id="breed_name" name="breed_name">
-      </div>
-      <div class="form-group">
-        <label for="sex">Sex</label>
-        <input type="text" class="form-control" id="sex" name="sex" required>
-      </div>
-      <div class="form-group">
-        <label for="age">Age</label>
-        <input type="text" class="form-control" id="age" name="age" required>
-      </div>
-      <div class="form-group">
-        <label for="weight">Weight (lb)</label>
-        <input type="number" step="0.1" class="form-control" id="weight" name="weight" required>
-      </div>
-      <div class="form-group">
-        <label for="color">Color</label>
-        <input type="text" class="form-control" id="color" name="color" required>
-      </div>
-      <div class="form-group">
-        <label for="vet">Vet</label>
-        <input type="text" class="form-control" id="vet" name="vet">
-      </div>
-      <div class="form-group">
-        <label for="tags">Tags</label>
-        <select class="form-control" id="tags" name="tags" multiple>
-          {% for tag in tags %}
-          <option value="{{tag.TagDescr}}">{{ tag.TagDescr }}</option>
+
+<script>
+  // adds medication fields to fill out for one medication
+  document.getElementById('add-medication-btn').addEventListener('click', function() {
+  const container = document.getElementById('medications-container');
+  const medicationIndex = container.children.length;
+
+  const medicationDiv = document.createElement('div');
+  medicationDiv.className = 'form-group';
+  medicationDiv.innerHTML = `
+    <div class="form-group row">
+      <div class="form-group col">
+        <label for="medications[${medicationIndex}][name]">Medication</label>
+        <select class="form-control" name="medications[${medicationIndex}][name]">
+          {% for med in meds %}
+            <option value="{{ med }}">{{ med }}</option>
           {% endfor %}
         </select>
       </div>
-      <div class="form-group">
-        <h3>Vaccinations</h3>
-        {% for vax in vaccinations %}
-        <div class="form-row mb-2">
-          <div class="col-sm-3 align-self-center">
-            <label class="mr-2" for="{{ vax }}">{{ vax }}</label>
-          </div>
-          <div class="col-sm-9">
-            <input type="date" class="form-control" id="{{ vax }}" name="{{ vax }}" required>
-          </div>
-        </div>
-        {% endfor %}
+      <div class="form-group col">
+        <label for="medications[${medicationIndex}][dose]">Dose</label>
+        <input type="text" class="form-control" name="medications[${medicationIndex}][dose]">
       </div>
+      <div class="form-group col">
+        <label for="medications[${medicationIndex}][notes]">Notes</label>
+        <input type="text" class="form-control" name="medications[${medicationIndex}][notes]">
+      </div>
+    </div>
+  `;
 
-      <div class="form-group">
-        <label for="notes">Notes</label>
-        <textarea class="form-control" id="notes" name="notes"></textarea>
-      </div>
-      <button type="submit" class="btn btn-primary">Add Dog</button>
-    </form>
-</div>
+  container.appendChild(medicationDiv);
+
+
+});
+</script>
+
 {% endblock %}
