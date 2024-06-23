@@ -9,8 +9,10 @@
 ** PR	Date		Author		Description
 ** 1	6/15/24		Kendall		Created procedure to AddDog and AddCust to database
 ** 2	6/19/24		Kendall		Updated procedure to AddDog/AddCust to allow more information input. Added AddTag, AddVax, and AddMed
+** 3	6/20/24		Kendall		Small bug fixes/formatting
 ******************************/
 use KenKennel;
+
 
 /*
 	Create stored procedure to add a dog to the database.
@@ -51,7 +53,7 @@ CREATE PROCEDURE dbo.AddDog
 	@CustFName varchar(50),
 	@CustLName varchar(50),
 	@BreedName varchar(50) = 'Mixed-Breed',
-	@Sex char(1),
+	@Sex varchar(10),
 	@Age varchar(25),
 	@Nickname varchar(25) = NULL,
 	@Weight decimal(4, 1),
@@ -63,24 +65,31 @@ AS
 	BEGIN
 		-- Check for null or invalid values in required parameters
 		IF @CustFName IS NULL OR @CustLName IS NULL OR @Sex IS NULL OR @Age IS NULL OR @Name IS NULL OR @Weight IS NULL OR @Color IS NULL
-			BEGIN
-				RAISERROR('One or more required parameters are not entered.', 16, 1)
-				RETURN
-			END
+		BEGIN
+			RAISERROR('One or more required parameters to add a dog are not entered.', 16, 1)
+			RETURN
+		END
 		  -- Check if the dog already exists in the database
 		IF EXISTS (
 			SELECT 1 FROM DOG
 				JOIN CUSTOMER ON DOG.CustID = CUSTOMER.CustID
 				WHERE DOG.[Name] = @Name AND CUSTOMER.FName = @CustFName AND CUSTOMER.LName = @CustLName
 		)
-			BEGIN
-					RAISERROR('The dog with the specified name and owner already exists.', 16, 1)
-					RETURN
-			END
+		BEGIN
+			RAISERROR('The dog with the specified name and owner already exists.', 16, 1)
+			RETURN
+		END
 
-		DECLARE @CustID INT = (SELECT CustID FROM CUSTOMER WHERE CUSTOMER.FName = @CustFName AND CUSTOMER.LName = @CustLName);
+		DECLARE @CustID INT = (SELECT dbo.F_Get_CustID(@CustFName, @CustLName));
 		DECLARE @BreedID INT = (SELECT BreedID FROM BREED WHERE BREED.BreedName = @BreedName);
-		DECLARE @SexID INT = (SELECT SexID FROM SEX WHERE SEX.SexAbrv = @Sex);
+		DECLARE @SexID INT = (SELECT SexID FROM SEX WHERE SEX.SexName = @Sex);
+
+		-- if customer, breed, or sex doesnt exist, raise error
+		IF @CustID IS NULL OR @BreedID IS NULL OR @SexID IS NULL
+		BEGIN
+			RAISERROR('Customer, breed, or Sex does not exist', 16, 1)
+			RETURN
+		END
 
 		INSERT INTO DOG (BreedID, CustID, SexID, Age, [Name], Nickname, [Weight], COlor, Vet, Notes)
 		VALUES
@@ -126,7 +135,7 @@ CREATE PROCEDURE dbo.AddCust
 	@CustFName varchar(50),
 	@CustLName varchar(50),
 	@Email varchar(100) = NULL,
-	@Phone varchar(11) = NULL,
+	@Phone varchar(11),
 	@AddrLine1 varchar(100),
 	@AddrLine2 varchar(100) = NULL,
 	@City varchar(50),
@@ -138,7 +147,7 @@ AS
 		-- Check for null or invalid values in required parameters
 		IF @CustFName IS NULL OR @CustLName IS NULL OR @AddrLine1 IS NULL OR @City IS NULL OR @Zip IS NULL
 		BEGIN
-			RAISERROR('One or more required parameters are not entered.', 16, 1)
+			RAISERROR('One or more required parameters to add a customer are not entered.', 16, 1)
 			RETURN
 		END
 
@@ -148,8 +157,8 @@ AS
 				WHERE CUSTOMER.FName = @CustFName AND CUSTOMER.LName = @CustLName
 		)
 		BEGIN
-				RAISERROR('The customer with the specified name already exists.', 16, 1)
-				RETURN
+			RAISERROR('The customer with the specified name already exists.', 16, 1)
+			RETURN
 		END
 
 		INSERT INTO CUSTOMER (FName, LName, Email)
@@ -160,27 +169,29 @@ AS
 		-- If already exists with CustID NULL, change CustID to new customer,
 		-- If already exists with CustID NOT NULL, Raise error
 		-- if Doesnt exist, enter new Phone num
-		DECLARE @CustID INT = (SELECT CustID FROM CUSTOMER WHERE FName = @CustFName AND LName = @CustLName)
+		DECLARE @CustID INT = (SELECT dbo.F_Get_CustID(@CustFName, @CustLName));
 
 		IF EXISTS (
 			SELECT 1 FROM PHONE_NUM
 				WHERE PHONE_NUM.Num = @Phone
 		)
 			BEGIN
-					IF (SELECT TOP 1 CustID FROM PHONE_NUM WHERE Num = @Phone) IS NULL
-					BEGIN
-						UPDATE PHONE_NUM SET CustID = @CustID WHERE Num = @Phone;
-					END
-					ELSE
-					BEGIN
-						RAISERROR('The phone number entered already exists.', 16, 1)
-						RETURN
-					END
+				IF (SELECT TOP 1 CustID FROM PHONE_NUM WHERE Num = @Phone) IS NULL
+				BEGIN
+					UPDATE PHONE_NUM SET CustID = @CustID WHERE Num = @Phone;
+				END
+				ELSE
+				BEGIN
+					RAISERROR('The phone number entered already exists.', 16, 1)
+					RETURN
+				END
 			END
-
-		INSERT INTO PHONE_NUM (CustID, Num)
-		VALUES
-			(@CustID, @Phone);
+			ELSE
+			BEGIN
+				INSERT INTO PHONE_NUM (CustID, Num)
+				VALUES
+					(@CustID, @Phone);
+			END
 
 		-- Check if the Address already exists in the database.
 		-- If already exists with CustID NULL, change CustID to new customer,
@@ -193,21 +204,22 @@ AS
 				AND Zip = @Zip
 		)
 		BEGIN
-				IF (SELECT TOP 1 CustID FROM [ADDRESS] WHERE AddressLine1 = @AddrLine1 AND City = @City AND Zip = @Zip) IS NULL
-				BEGIN
-					UPDATE [ADDRESS] SET CustID = @CustID WHERE AddressLine1 = @AddrLine1 AND City = @City AND Zip = @Zip;
-				END
-				ELSE
-				BEGIN
-					RAISERROR('The address entered already exists.', 16, 1)
-					RETURN
-				END
+			IF (SELECT TOP 1 CustID FROM [ADDRESS] WHERE AddressLine1 = @AddrLine1 AND City = @City AND Zip = @Zip) IS NULL
+			BEGIN
+				UPDATE [ADDRESS] SET CustID = @CustID WHERE AddressLine1 = @AddrLine1 AND City = @City AND Zip = @Zip;
+			END
+			ELSE
+			BEGIN
+				RAISERROR('The address entered already exists.', 16, 1)
+				RETURN
+			END
 		END
-
-		INSERT INTO [ADDRESS] (CustID, StateID, AddressTypeID, AddressLine1, AddressLine2, City, Zip)
-		VALUES
-			(@CustID, (SELECT StateID FROM [STATE] WHERE StateAbrv = @State), (SELECT AddressTypeID FROM ADDRESS_TYPE WHERE AddressTypeName = 'Home'), @AddrLine1, @AddrLine2, @City, @Zip);
-
+		ELSE
+		BEGIN
+			INSERT INTO [ADDRESS] (CustID, StateID, AddressTypeID, AddressLine1, AddressLine2, City, Zip)
+			VALUES
+				(@CustID, (SELECT StateID FROM [STATE] WHERE StateAbrv = @State), (SELECT AddressTypeID FROM ADDRESS_TYPE WHERE AddressTypeName = 'Home'), @AddrLine1, @AddrLine2, @City, @Zip);
+		END
 	END
 GO
 
@@ -243,13 +255,13 @@ CREATE PROCEDURE dbo.AddTag
 
 AS
 	BEGIN
-		DECLARE @DogID INT = (SELECT TOP 1 D.DogID FROM DOG D JOIN CUSTOMER C ON C.CustID = D.CustID WHERE D.[Name] = @Name AND C.LName = @LName);
+		DECLARE @DogID INT = (SELECT dbo.F_Get_DogID(@Name, @LName));
 		DECLARE @TagID INT = (SELECT TOP 1 TagID FROM TAG WHERE TagDescr = @TagDescr);
 
 		-- Check for null or invalid values in required parameters
 		IF @Name IS NULL OR @LName IS NULL OR @TagDescr IS NULL
 		BEGIN
-			RAISERROR('One or more required parameters are not entered.', 16, 1)
+			RAISERROR('One or more required parameters to add a tag are not entered.', 16, 1)
 			RETURN
 		END
 
@@ -259,8 +271,8 @@ AS
 				WHERE DogID = @DogID
 		)
 		BEGIN
-				RAISERROR('The dog with the specified name does not exist.', 16, 1)
-				RETURN
+			RAISERROR('The dog with the specified name does not exist.', 16, 1)
+			RETURN
 		END
 
 		-- Check if the tag exists in the database
@@ -269,8 +281,8 @@ AS
 				WHERE TagID = @TagID
 		)
 		BEGIN
-				RAISERROR('The tag that was input does not exist.', 16, 1)
-				RETURN
+			RAISERROR('The tag that was input does not exist.', 16, 1)
+			RETURN
 		END
 
 		-- Check if the tag is already associated with that dog
@@ -279,8 +291,8 @@ AS
 				WHERE DogID = @DogID AND TagID = @TagID
 		)
 		BEGIN
-				RAISERROR('The tag is already associated with that dog.', 16, 1)
-				RETURN
+			RAISERROR('The tag is already associated with that dog.', 16, 1)
+			RETURN
 		END
 
 
@@ -291,6 +303,8 @@ AS
 
 	END
 GO
+
+
 
 /*
 	Create stored procedure to add a vaccine to a dog
@@ -326,13 +340,13 @@ CREATE PROCEDURE dbo.AddVax
 
 AS
 	BEGIN
-		DECLARE @DogID INT = (SELECT D.DogID FROM DOG D JOIN CUSTOMER C ON C.CustID = D.CustID WHERE D.[Name] = @Name AND C.LName = @LName)
-		DECLARE @VaxID INT = (SELECT VaxID FROM VACCINATION WHERE VaxName = @VaxName)
+		DECLARE @DogID INT = (SELECT dbo.F_Get_DogID(@Name, @LName));
+		DECLARE @VaxID INT = (SELECT VaxID FROM VACCINATION WHERE VaxName = @VaxName);
 
 		-- Check for null or invalid values in required parameters
 		IF @Name IS NULL OR @LName IS NULL OR @VaxName IS NULL OR @VaxDate IS NULL
 		BEGIN
-			RAISERROR('One or more required parameters are not entered.', 16, 1)
+			RAISERROR('One or more required parameters to add a vaccine are not entered.', 16, 1)
 			RETURN
 		END
 
@@ -342,8 +356,8 @@ AS
 				WHERE DogID = @DogID
 		)
 		BEGIN
-				RAISERROR('The dog with the specified name does not exist.', 16, 1)
-				RETURN
+			RAISERROR('The dog with the specified name does not exist.', 16, 1)
+			RETURN
 		END
 
 		-- Check if the vaccine exists in the database
@@ -352,8 +366,8 @@ AS
 				WHERE VaxID = @VaxID
 		)
 		BEGIN
-				RAISERROR('The vaccination that was input does not exist.', 16, 1)
-				RETURN
+			RAISERROR('The vaccination that was input does not exist.', 16, 1)
+			RETURN
 		END
 
 		-- Check if the vaccine is already associated with that dog, if it is, update date. else create new DOG_VAX entry
@@ -366,10 +380,9 @@ AS
 		END
 		ELSE
 		BEGIN
-
-		INSERT INTO DOG_VAX (DogID, VaxID, VaxDate)
-		VALUES
-			(@DogID, @VaxID, @VaxDate);
+			INSERT INTO DOG_VAX (DogID, VaxID, VaxDate)
+			VALUES
+				(@DogID, @VaxID, @VaxDate);
 		END
 
 	END
@@ -401,7 +414,6 @@ IF EXISTS (
    DROP PROCEDURE dbo.AddMed
 GO
 
-
 CREATE PROCEDURE dbo.AddMed
 	@Name varchar(50),
 	@LName varchar(50),
@@ -411,13 +423,13 @@ CREATE PROCEDURE dbo.AddMed
 
 AS
 	BEGIN
-		DECLARE @DogID INT = (SELECT D.DogID FROM DOG D JOIN CUSTOMER C ON C.CustID = D.CustID WHERE D.[Name] = @Name AND C.LName = @LName)
-		DECLARE @MedID INT = (SELECT MedID FROM MEDICATION WHERE MedName = @MedName)
+		DECLARE @DogID INT = (SELECT dbo.F_Get_DogID(@Name, @LName));
+		DECLARE @MedID INT = (SELECT MedID FROM MEDICATION WHERE MedName = @MedName);
 
 		-- Check for null or invalid values in required parameters
 		IF @Name IS NULL OR @LName IS NULL OR @MedName IS NULL OR @Dose IS NULL
 		BEGIN
-			RAISERROR('One or more required parameters are not entered.', 16, 1)
+			RAISERROR('One or more required parameters to add a med are not entered.', 16, 1)
 			RETURN
 		END
 
@@ -427,8 +439,8 @@ AS
 				WHERE DogID = @DogID
 		)
 		BEGIN
-				RAISERROR('The dog with the specified name does not exist.', 16, 1)
-				RETURN
+			RAISERROR('The dog with the specified name does not exist.', 16, 1)
+			RETURN
 		END
 
 		-- Check if the vaccine exists in the database
@@ -437,8 +449,8 @@ AS
 				WHERE MedID = @MedID
 		)
 		BEGIN
-				RAISERROR('The medication that was input does not exist.', 16, 1)
-				RETURN
+			RAISERROR('The medication that was input does not exist.', 16, 1)
+			RETURN
 		END
 
 		-- Check if the medication is already associated with that dog, if it is, update does and notes. else create new DOG_MED entry
@@ -451,11 +463,11 @@ AS
 		END
 		ELSE
 		BEGIN
-
-		INSERT INTO DOG_MED (DogID, MedID, Dose, Notes)
-		VALUES
-			(@DogID, @MedID, @Dose, @Notes);
+			INSERT INTO DOG_MED (DogID, MedID, Dose, Notes)
+			VALUES
+				(@DogID, @MedID, @Dose, @Notes);
 		END
 
 	END
 GO
+
