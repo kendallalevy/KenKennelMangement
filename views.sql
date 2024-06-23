@@ -10,13 +10,15 @@
 ** 1	6/15/2024	Kendall		Created V_Get_Dogs view for KenKennel
 ** 2	6/18/2024	Kendall		Created V_Get_Cust view for KenKennel
 ** 3	6/19/2024	Kendall		Adjusted V_Get_Dogs to show more information, may change later.
+** 4	6/21/2024	Kendall		Added V_Get_Cust_Name view
 ******************************/
 
 use KenKennel;
-
+SELECT * FROM CUSTOMER C JOIN DOG D ON C.CustID = D.CustID WHERE C.FName = 'Kendall'
+select D.Name FROM DOG D JOIN CUSTOMER C ON C.CustID = D.CustID WHERE C.FName = 'Lily' AND C.LName = 'Phillips'
 
 /* Get all dogs and important information regarding dog */
-DROP VIEW IF Exists dbo.V_Get_Dogs
+DROP VIEW IF EXISTS dbo.V_Get_Dogs
 GO
 
 CREATE VIEW dbo.V_Get_Dogs AS
@@ -33,7 +35,7 @@ GO
 
 
 /* Get all Customers and contact information */
-DROP VIEW IF Exists dbo.V_Get_Cust
+DROP VIEW IF EXISTS dbo.V_Get_Cust
 GO
 
 CREATE VIEW dbo.V_Get_Cust AS
@@ -42,4 +44,13 @@ FROM CUSTOMER C
 	JOIN PHONE_NUM P ON P.CustID = C.CustID
 	JOIN [ADDRESS] A ON A.CustID = C.CustID
 	JOIN [STATE] S ON S.StateID = A.StateID
+GO
+
+/* Get Customer first and last name in one Column */
+DROP VIEW IF EXISTS dbo.V_Get_Cust_Name
+GO
+
+CREATE VIEW dbo.V_Get_Cust_Name AS
+SELECT FName, LName
+FROM CUSTOMER
 GO
