@@ -167,6 +167,7 @@ def add_cust():
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
+            # execute stored proc to add customer to db
             cursor.execute('EXEC dbo.AddCust @CustFName=?, @CustLName=?, @Email=?, @Phone=?, @AddrLine1=?, @AddrLine2=?, @City=?, @State=?, @Zip=?',
                            (cust_fname, cust_lname, email, phone, addr1, addr2, city, state, zipCode))
             conn.commit()
@@ -181,12 +182,19 @@ def add_cust():
 @app.route('/add_visit', methods=['POST', 'GET'])
 def add_visit():
     all_cust = []
+    all_statuses = []
     try:
       # get data to display in form
       conn = get_db_connection()
       cursor = conn.cursor()
       cursor.execute('SELECT FName, LName FROM dbo.V_Get_Cust_Name')
       all_cust = cursor.fetchall()
+      cursor.execute('SELECT VisitStatus FROM VISIT_STATUS')
+      all_statuses = [status[0] for status in cursor.fetchall()]
+      cursor.execute('SELECT BelongingTypeName FROM dbo.BELONGING_TYPE')
+      all_bel_types = [belType[0] for belType in cursor.fetchall()]
+      cursor.execute('SELECT ActivityTypeName FROM ACTIVITY_TYPE')
+      all_act_types = [actType[0] for actType in cursor.fetchall()]
       conn.commit()
       cursor.close()
       conn.close()
@@ -197,9 +205,26 @@ def add_visit():
       # Get form data
       cust_name = request.form.get('cust_name')
       cust_fname, cust_lname = cust_name.rsplit(" ")
+      status = request.form.get('status')
+      arrvDate = request.form.get('arrvDate')
+      dprtDate = request.form.get('dprtDate')
+      grmDate = request.form.get('grmDate')
+      selected_belongings = request.form.getlist('belongings') or None
+      selected_activites = request.form.getlist('activities') or None
       
 
-    return render_template('add_visit.html', names=all_cust)
+
+      if selected_belongings is not None:
+        for index in range(len(selected_belongings)):
+            bel_descr = request.form.get(f'belongings[{index}][descr]')
+            bel_type = request.form.get(f'belongings[{index}][type]')
+            
+      if selected_activities is not None:
+        for index in range(len(selected_activities)):
+           act_type = request.form.get(f'activities[{index}][type]')
+
+
+    return render_template('add_visit.html', names=all_cust, statuses=all_statuses, belongings=all_bel_types, activities=all_act_types)
 
 @app.route('/get_dogs')
 def get_dogs():
@@ -210,6 +235,7 @@ def get_dogs():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        # Get dog names of customer based on args
         cursor.execute('SELECT D.[Name] FROM DOG D JOIN CUSTOMER C ON C.CustID = D.CustID WHERE C.FName = ? AND C.LName = ?', (cust_fname, cust_lname))
         dogs = [row[0] for row in cursor.fetchall()]
         cursor.close()
