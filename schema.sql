@@ -10,6 +10,7 @@
 ** 1	6/9/24		Kendall		Created all tables for schema
 ** 2	6/13/24		Kendall		Inserted dummy data for tables
 ** 3	6/18/24		Kendall		Removed CUSTOMER_ADDRESS
+** 4	6/19/24		Kendall		BELONGING chagned to associate with visit rather than dog. Some adjustments to dummy data.
 ******************************/
 USE master;
 GO
@@ -440,7 +441,6 @@ GO
 	- ArrivalDate: date the dog arrived/arrives
 	- DepartDate: date the dog departed/departs
 	- GroomDate: date the dog is groomed
-	- TotCost: total cost charged to the owners (excluding tax)
 
 	Constraints:
 	- VisitID: PK
@@ -457,7 +457,6 @@ CREATE TABLE dbo.VISIT
 	ArrivalDate date NOT NULL,
 	DepartDate date NULL,
 	GroomDate date NULL,
-	TotCost money NULL,
     CONSTRAINT PK_visit PRIMARY KEY (VisitID),
 	CONSTRAINT FK_visit_dog FOREIGN KEY (DogID) REFERENCES dbo.DOG (DogID),
 	CONSTRAINT FK_visit_run FOREIGN KEY (RunID) REFERENCES dbo.RUN (RunID),
@@ -1068,9 +1067,9 @@ VALUES
 	(@A, NULL, 'A20'),
 	(@A, NULL, 'A21'),
 	(@A, NULL, 'A22'),
-	(@A, NULL, 'AS23'),
-	(@A, NULL, 'AS24'),
-	(@A, NULL, 'AS25'),
+	(@A, @S, 'AS23'),
+	(@A, @S, 'AS24'),
+	(@A, @S, 'AS25'),
 	(@B, @C, 'BC1'),
 	(@B, @C, 'BC2'),
 	(@B, @C, 'BC3'),
@@ -1240,7 +1239,6 @@ VALUES
 	('Nothing but own food/treats'),
 	('Escape artist'),
 	('Bolter'),
-	('Fence climber'),
 	('Stool eater'),
 	('No rugs, rubs nose'),
 	('Own bedding only'),
@@ -1250,7 +1248,16 @@ VALUES
 	('Chewer'),
 	('Nothing around neck, medical'),
 	('Extra potty walks'),
-	('Picky eater')
+	('Picky eater'),
+	('Fence climber'),
+	('Tall'),
+	('Covered Run'),
+	('No Uppers'),
+	('E Kennel Request'),
+	('D Kennel Request'),
+	('A/B Kennel Request'),
+	('D Suite Request'),
+	('A/B Suite Request')
 GO
 
 INSERT INTO VACCINATION (VaxName)
@@ -1409,4 +1416,3 @@ VALUES
 	((SELECT TOP 1 VisitID FROM VISIT ORDER BY NEWID()), @Crate, 'Plastic crate')
 GO
 */
-

@@ -21,22 +21,62 @@ Book a Visit
 
   <form action="/add_visit" method="post">
     <h3>Customer</h3>
-    <select class="selectpicker form-control" data-live-search="true" id="cust_name" name="cust_name" title="Select customer..." required onchange="fetchDogs(this.value)">
+    <select class="selectpicker form-control mt-2" data-live-search="true" id="cust_name" name="cust_name" title="Select customer..." required onchange="fetchDogs(this.value)">
       {% for name in names %}
       <option value="{{name[0] + ' ' + name[1]}}">{{name[0] + ' ' + name[1]}}</option>
       {% endfor %}
     </select>
 
-    <h3>Dog</h3>
-    <select class="selectpicker form-control" data-live-search="true" id="dog_name" name="dog_name" title="Select dog..." required>
-      
-    </select>
+    <h3 class="mt-4">Dog</h3>
+    <select class="selectpicker form-control mt-2" data-live-search="true" id="dog_name" name="dog_name" title="Select dog..." required> </select>
 
-    <button type="submit" class="btn btn-primary">Book</button>
+    <h3 class="mt-4 mb-2">Boarding Information</h3>
+    <select class="selectpicker form-control mt-2" id="status" name="status" title="Select status..." required>
+      {% for status in statuses %}
+      <option>{{status}}</option>
+      {% endfor %}
+    </select>
+    <div class="form-row mb-2 mt-4">
+      <div class="col-sm-3 align-self-center">
+        <label class="mr-2" for="arrvDate">Arrival Date</label>
+      </div>
+      <div class="col-sm-9">
+        <input type="date" class="form-control" id="arrvDate" name="arrvDate" required>
+      </div>
+    </div>
+    <div class="form-row mb-2">
+      <div class="col-sm-3 align-self-center">
+        <label class="mr-2" for="dprtDate">Depart Date</label>
+      </div>
+      <div class="col-sm-9">
+        <input type="date" class="form-control" id="dprtDate" name="dprtDate" required>
+      </div>
+    </div>
+    <div class="form-row mb-2">
+      <div class="col-sm-3 align-self-center">
+        <label class="mr-2" for="grmDate">Groom Date</label>
+      </div>
+      <div class="col-sm-9">
+        <input type="date" class="form-control" id="grmDate" name="grmDate">
+      </div>
+    </div>
+    <div class="form-group">
+      <h3>Belongings</h3>
+      <div id="belonging-container" class="container-fluid"></div>
+      <button type="button" class="btn btn-secondary" id="add-belonging-btn">Add Belonging</button>
+    </div>
+    <div class="form-group">
+      <h3>Activities</h3>
+      <div id="activity-container" class="container-fluid"></div>
+      <button type="button" class="btn btn-secondary" id="add-activity-btn" disabled>Add Activity</button>
+    </div>
+
+    <button type="submit" class="mt-4 btn btn-primary">Book</button>
   </form>
 </div>
 
 <script>
+  // function to display a list of dogs based on the customer selected
   function fetchDogs(customerName) {
     fetch(`/get_dogs?customer=${encodeURIComponent(customerName)}`)
       .then(response => {
@@ -56,9 +96,6 @@ Book a Visit
             option.textContent = dog;
             dogSelect.appendChild(option);
           });
-        } else {
-          // Handle case where no dogs are found
-          console.log("No dogs found for the selected customer");
         }
 
         // Refresh the select picker if using Bootstrap Select
@@ -69,5 +106,187 @@ Book a Visit
       .catch(error => console.error('Error fetching dogs:', error));
   }
 
-</script> 
+  // limit departure date so user cannot select any date BEFORE arrival date
+  document.getElementById('arrvDate').addEventListener('change', function () {
+    const arrvDate = document.getElementById('arrvDate').value;
+    const dprtDateInput = document.getElementById('dprtDate');
+    if (arrvDate) {
+      dprtDateInput.setAttribute('min', arrvDate);
+    } else {
+      dprtDateInput.removeAttribute('min');
+    }
+    updateActivityDates();
+  });
+
+  // limit arrival date so user cannot select any date AFTER departure date
+  document.getElementById('dprtDate').addEventListener('change', function () {
+    const dprtDate = document.getElementById('dprtDate').value;
+    const arrvDateInput = document.getElementById('arrvDate');
+    if (dprtDate) {
+      arrvDateInput.setAttribute('max', dprtDate);
+    } else {
+      arrvDateInput.removeAttribute('max');
+    }
+    updateActivityDates();
+  });
+
+  // limit groom date so user can only select dates between arrival and departure inclusive
+  document.getElementById('grmDate').addEventListener('change', function () {
+    const dprtDate = document.getElementById('dprtDate').value;
+    const arrvDate = document.getElementById('arrvDate').value;
+    const grmDateInput = document.getElementById('grmDate');
+
+    updateGrmDate();
+  });
+
+  // creates a field to add a belonging based on button click
+  document.getElementById('add-belonging-btn').addEventListener('click', function () {
+    const container = document.getElementById('belonging-container');
+    const belongingIndex = container.children.length;
+
+    const belongingDiv = document.createElement('div');
+    belongingDiv.className = 'form-group';
+
+    $(document).ready(function () {
+      $('.selectpicker').selectpicker();
+    });
+    belongingDiv.innerHTML = `
+      <div class="form-group row">
+        <div class="form-group col">
+         <label for="belongings[${belongingIndex}][descr]">Belonging Description</label>
+         <input type="text" class="form-control" name="belongings[${belongingIndex}][descr]">
+        </div>
+        <div class="form-group col">
+          <label for="belonging[${belongingIndex}][type]">Belonging Type</label>
+          <select class="form-control selectpicker" name="belongings[${belongingIndex}][type]" id="belongings[${belongingIndex}][type]" title="Select a type...">
+            {% for belonging in belongings %}
+              <option value="{{ belonging }}">{{ belonging }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(belongingDiv);
+  });
+
+
+  // Function to handle changes in arrival or departure dates
+  function handleDateChange() {
+    const arrvDate = document.getElementById('arrvDate').value;
+    const dprtDate = document.getElementById('dprtDate').value;
+    const grmDateInput = document.getElementById('grmDate');
+    const addActivityBtn = document.getElementById('add-activity-btn');
+
+    // Update min/max for departure date
+    if (arrvDate) {
+      document.getElementById('dprtDate').setAttribute('min', arrvDate);
+    } else {
+      document.getElementById('dprtDate').removeAttribute('min');
+    }
+
+    // Update min/max for arrival date
+    if (dprtDate) {
+      document.getElementById('arrvDate').setAttribute('max', dprtDate);
+    } else {
+      document.getElementById('arrvDate').removeAttribute('max');
+    }
+
+    // Update min/max for groom date
+    if (arrvDate) {
+      grmDateInput.setAttribute('min', arrvDate);
+    } else {
+      grmDateInput.removeAttribute('min');
+    }
+
+    if (dprtDate) {
+      grmDateInput.setAttribute('max', dprtDate);
+    } else {
+      grmDateInput.removeAttribute('max');
+    }
+
+    // reset groom date if out of new range
+    const grmDate = grmDateInput.value;
+    if (grmDate && (grmDate < arrvDate || grmDate > dprtDate)) {
+      grmDateInput.value = '';
+    }
+
+    // Enable/disable add activity button
+    addActivityBtn.disabled = !(arrvDate && dprtDate);
+
+    // Update activity dates options
+    updateActivityDates();
+  }
+
+  // Function to update activity dates
+  function updateActivityDates() {
+    const arrvDate = document.getElementById('arrvDate').value;
+    const dprtDate = document.getElementById('dprtDate').value;
+    if (arrvDate && dprtDate) {
+      const dates = getDatesBetween(arrvDate, dprtDate);
+      const activityContainers = document.getElementById('activity-container').children;
+
+      for (const activityDiv of activityContainers) {
+        const dateSelect = activityDiv.querySelector('select[name^="activities"][name$="[dates]"]');
+        if (dateSelect) {
+          dateSelect.innerHTML = dates.map(date => `<option value="${date}">${date}</option>`).join('');
+          $('.selectpicker').selectpicker('refresh');
+        }
+      }
+    }
+  }
+
+  document.getElementById('arrvDate').addEventListener('change', handleDateChange);
+  document.getElementById('dprtDate').addEventListener('change', handleDateChange);
+
+  // gets an array of dates between two dates passed in through params
+  function getDatesBetween(startDate, endDate) {
+    const dates = [];
+    let currentDate = new Date(startDate);
+    const lastDate = new Date(endDate);
+    while (currentDate <= lastDate) {
+      dates.push(new Date(currentDate).toISOString().split('T')[0]);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return dates;
+  }
+
+  // adds activity fields based on button click
+  document.getElementById('add-activity-btn').addEventListener('click', function () {
+    const container = document.getElementById('activity-container');
+    const activityIndex = container.children.length;
+
+    const arrvDate = document.getElementById('arrvDate').value;
+    const dprtDate = document.getElementById('dprtDate').value;
+    const dates = getDatesBetween(arrvDate, dprtDate);
+
+    const activityDiv = document.createElement('div');
+    activityDiv.className = 'form-group';
+
+    $(document).ready(function () {
+      $('.selectpicker').selectpicker();
+    });
+    activityDiv.innerHTML = `
+    <div class="form-group row">
+      <div class="form-group col">
+        <label for="activities[${activityIndex}][type]">Activity Type</label>
+        <select class="form-control selectpicker" name="activities[${activityIndex}][type]" id="activities[${activityIndex}][type]" title="Select a type...">
+          {% for activity in activities %}
+            <option value="{{ activity }}">{{ activity }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group col">
+        <label for="activities[${activityIndex}][dates]">Activity Dates</label>
+        <select class="form-control selectpicker" multiple name="activities[${activityIndex}][dates]" id="activities[${activityIndex}][dates]" title="Select dates...">
+          ${dates.map(date => `<option value="${date}">${date}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+  `;
+
+    container.appendChild(activityDiv);
+    $('.selectpicker').selectpicker('refresh');
+  });
+</script>
 {% endblock %}

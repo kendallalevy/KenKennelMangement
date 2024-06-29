@@ -14,8 +14,6 @@
 ******************************/
 
 use KenKennel;
-SELECT * FROM CUSTOMER C JOIN DOG D ON C.CustID = D.CustID WHERE C.FName = 'Kendall'
-select D.Name FROM DOG D JOIN CUSTOMER C ON C.CustID = D.CustID WHERE C.FName = 'Lily' AND C.LName = 'Phillips'
 
 /* Get all dogs and important information regarding dog */
 DROP VIEW IF EXISTS dbo.V_Get_Dogs

@@ -10,6 +10,7 @@
 ** 1	6/15/24		Kendall		Created procedure to AddDog and AddCust to database
 ** 2	6/19/24		Kendall		Updated procedure to AddDog/AddCust to allow more information input. Added AddTag, AddVax, and AddMed
 ** 3	6/20/24		Kendall		Small bug fixes/formatting
+** 4	6/27/24		Kendall		Added AddVisit
 ******************************/
 use KenKennel;
 
@@ -228,8 +229,9 @@ GO
 	Create stored procedure to add a tag to a dog
 
 	Param:
+		@FName = first name of customer
+		@LName = last name of customer
 		@Name = first name of dog
-		@LName = last name of dog
 		@TagDescr = tag to associate with dog
 
 	Assumptions:
@@ -249,13 +251,14 @@ GO
 
 
 CREATE PROCEDURE dbo.AddTag
-	@Name varchar(50),
+	@FName varchar(50),
 	@LName varchar(50),
+	@Name varchar(50),
 	@TagDescr varchar(50)
 
 AS
 	BEGIN
-		DECLARE @DogID INT = (SELECT dbo.F_Get_DogID(@Name, @LName));
+		DECLARE @DogID INT = (SELECT dbo.F_Get_DogID(@FName, @LName, @Name));
 		DECLARE @TagID INT = (SELECT TOP 1 TagID FROM TAG WHERE TagDescr = @TagDescr);
 
 		-- Check for null or invalid values in required parameters
@@ -310,8 +313,9 @@ GO
 	Create stored procedure to add a vaccine to a dog
 
 	Param:
+		@FName = first name of customer
+		@LName = last name of customer
 		@Name = first name of dog
-		@LName = last name of dog
 		@VaxName = name of the vaccine
 		@VaxDate = date the vaccine was given
 
@@ -333,14 +337,15 @@ GO
 
 
 CREATE PROCEDURE dbo.AddVax
-	@Name varchar(50),
+	@FName varchar(50),
 	@LName varchar(50),
+	@Name varchar(50),
 	@VaxName varchar(25),
 	@VaxDate date
 
 AS
 	BEGIN
-		DECLARE @DogID INT = (SELECT dbo.F_Get_DogID(@Name, @LName));
+		DECLARE @DogID INT = (SELECT dbo.F_Get_DogID(@FName, @LName, @Name));
 		DECLARE @VaxID INT = (SELECT VaxID FROM VACCINATION WHERE VaxName = @VaxName);
 
 		-- Check for null or invalid values in required parameters
@@ -392,8 +397,9 @@ GO
 	Create stored procedure to add a medication to a dog
 
 	Param:
+		@FName = first name of Customer
+		@LName = last name of Customer
 		@Name = first name of dog
-		@LName = last name of dog
 		@MedName = name of the medication
 		@Dose = dosage of medication
 		@Notes = any specific notes about medication
@@ -415,15 +421,16 @@ IF EXISTS (
 GO
 
 CREATE PROCEDURE dbo.AddMed
-	@Name varchar(50),
+	@FName varchar(50),
 	@LName varchar(50),
+	@Name varchar(50),
 	@MedName varchar(50),
 	@Dose varchar(100),
 	@Notes varchar(100) = NULL
 
 AS
 	BEGIN
-		DECLARE @DogID INT = (SELECT dbo.F_Get_DogID(@Name, @LName));
+		DECLARE @DogID INT = (SELECT dbo.F_Get_DogID(@FName, @LName, @Name));
 		DECLARE @MedID INT = (SELECT MedID FROM MEDICATION WHERE MedName = @MedName);
 
 		-- Check for null or invalid values in required parameters
@@ -443,7 +450,7 @@ AS
 			RETURN
 		END
 
-		-- Check if the vaccine exists in the database
+		-- Check if the medication exists in the database
 		IF NOT EXISTS (
 			SELECT 1 FROM MEDICATON
 				WHERE MedID = @MedID
@@ -471,3 +478,80 @@ AS
 	END
 GO
 
+/*
+	Create stored procedure to add a visit to a dog
+
+	Param:
+		@DogID = id of dog visiting
+		@Status = status of visit
+		@Arrive = date dog is scheduled to arrive
+		@Depart = date dog is scheduled to depart
+		@Groom = date dog is scheduled to get groomed
+
+	Assumptions:
+		Customer, Dog, and status must exist
+		Depart is after arrive, groom is between arrive and depart
+
+*/
+-- Drop stored procedure if it already exists
+IF EXISTS (
+  SELECT * 
+    FROM INFORMATION_SCHEMA.ROUTINES 
+   WHERE SPECIFIC_SCHEMA = N'dbo'
+     AND SPECIFIC_NAME = N'AddVisit' 
+)
+   DROP PROCEDURE dbo.AddVisit
+GO
+
+CREATE PROCEDURE dbo.AddVisit
+	@DogID int,
+	@Status varchar(50),
+	@Arrive date,
+	@Depart date,
+	@Groom date = NULL,
+	@RunID int
+
+AS
+	BEGIN
+		DECLARE @StatusID INT = (SELECT StatusID FROM VISIT_STATUS WHERE VisitStatus = @Status);
+
+		-- Check for null or invalid values in required parameters
+		IF @DogID IS NULL OR @Status IS NULL OR @Arrive IS NULL OR @Depart IS NULL
+		BEGIN
+			RAISERROR('One or more required parameters to add a med are not entered.', 16, 1)
+			RETURN
+		END
+
+		-- Check if the dog exists in the database
+		IF NOT EXISTS (
+			SELECT 1 FROM DOG
+				WHERE DogID = @DogID
+		)
+		BEGIN
+			RAISERROR('The dog with the specified name does not exist.', 16, 1)
+			RETURN
+		END
+
+		-- Check if the status exists in the database
+		IF NOT EXISTS (
+			SELECT 1 FROM VISIT_STATUS
+				WHERE StatusID = @StatusID
+		)
+		BEGIN
+			RAISERROR('The Status that was input does not exist.', 16, 1)
+			RETURN
+		END
+
+		-- Check if the dates are possible
+		IF (@Depart < @Arrive)
+		BEGIN
+			RAISERROR('The departure and arrival dates are impossible.', 16, 1)
+			RETURN
+		END
+
+		INSERT INTO dbo.VISIT (DogID, RunID, StatusID, ArrivalDate, DepartDate, GroomDate)
+		VALUES
+			(@DogID, @RunID, @StatusID, @Arrive, @Depart, @Groom)
+
+	END
+GO
