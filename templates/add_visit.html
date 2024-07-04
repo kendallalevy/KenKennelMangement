@@ -157,7 +157,7 @@ Book a Visit
          <input type="text" class="form-control" name="belongings[${belongingIndex}][descr]">
         </div>
         <div class="form-group col">
-          <label for="belonging[${belongingIndex}][type]">Belonging Type</label>
+          <label for="belongings[${belongingIndex}][type]">Belonging Type</label>
           <select class="form-control selectpicker" name="belongings[${belongingIndex}][type]" id="belongings[${belongingIndex}][type]" title="Select a type...">
             {% for belonging in belongings %}
               <option value="{{ belonging }}">{{ belonging }}</option>
@@ -270,7 +270,7 @@ Book a Visit
     <div class="form-group row">
       <div class="form-group col">
         <label for="activities[${activityIndex}][type]">Activity Type</label>
-        <select class="form-control selectpicker" name="activities[${activityIndex}][type]" id="activities[${activityIndex}][type]" title="Select a type...">
+        <select class="form-control selectpicker" name="activities[${activityIndex}][type]" id="activities[${activityIndex}][type]" title="Select a type..." required>
           {% for activity in activities %}
             <option value="{{ activity }}">{{ activity }}</option>
           {% endfor %}
@@ -278,7 +278,7 @@ Book a Visit
       </div>
       <div class="form-group col">
         <label for="activities[${activityIndex}][dates]">Activity Dates</label>
-        <select class="form-control selectpicker" multiple name="activities[${activityIndex}][dates]" id="activities[${activityIndex}][dates]" title="Select dates...">
+        <select class="form-control selectpicker" multiple data-actions-box="true" name="activities[${activityIndex}][dates]" id="activities[${activityIndex}][dates]" title="Select dates..." required>
           ${dates.map(date => `<option value="${date}">${date}</option>`).join('')}
         </select>
       </div>
