@@ -13,6 +13,7 @@ import pyodbc
 from dotenv import load_dotenv
 import random
 import copy
+from datetime import datetime
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -38,7 +39,7 @@ def get_db_connection():
 def home():
   return render_template('index.html')
 
-@app.route('/edit_dog', methods=['POST', 'GET'])
+@app.route('/update_dog', methods=['POST', 'GET'])
 def edit_dog():
   if request.method == 'POST':
     first_name = request.form.get('first_name')
@@ -212,21 +213,6 @@ def add_visit():
     arrvDate = request.form.get('arrvDate')
     dprtDate = request.form.get('dprtDate')
     grmDate = request.form.get('grmDate')
-    selected_belongings = request.form.getlist('belongings') or None
-    selected_activities = request.form.getlist('activities') or None
-      
-
-
-    if selected_belongings is not None:
-      for index in range(len(selected_belongings)):
-        bel_descr = request.form.get(f'belongings[{index}][descr]')
-        bel_type = request.form.get(f'belongings[{index}][type]')
-            
-    if selected_activities is not None:
-      for index in range(len(selected_activities)):
-        act_type = request.form.get(f'activities[{index}][type]')
-      
-
     try:
       # open connection to db  
       conn = get_db_connection()
@@ -241,16 +227,49 @@ def add_visit():
         runs[run[0]] = run[1]
       cursor.execute('SELECT dbo.F_Get_DogID(?, ?, ?)', (cust_fname, cust_lname, dog_name))
       dogID = cursor.fetchone()[0]
+      
       # call fuction to assign run to dog
       runID = get_run(cursor, runs, dogID)
+      
+      # check if dog is already booked in a conflicting visit
+      cursor.execute('SELECT dbo.F_Get_Overlap(?, ?, ?)',
+                     (dogID, arrvDate, dprtDate))
+      overlaps = cursor.fetchone()[0]
+
       if runID == -1:
         flash('No Run Available', 'error')
+      elif overlaps is True:
+        flash('Dog is booked in a conflicting visit', 'error')
       else:
         # execute stored proc to add customer to db
         cursor.execute('EXEC dbo.AddVisit @DogID=?, @Status=?, @Arrive=?, @Depart=?, @Groom=?, @RunID=?',
                         (dogID, status, arrvDate, dprtDate, grmDate, runID))
         cursor.execute('SELECT RunNumber FROM RUN WHERE RunID = ?', (runID))
-        runName = cursor.fetchone()[0]
+        
+        runName = cursor.fetchone()[0] # use to display to user which run dog is booked in
+        
+        # add each belonging to db
+        belongings = []
+        belonging_index = 0
+        while f'belongings[{belonging_index}][descr]' in request.form:
+          bel_descr = request.form.get(f'belongings[{belonging_index}][descr]')
+          bel_type = request.form.get(f'belongings[{belonging_index}][type]')
+          cursor.execute('EXEC dbo.AddBelonging @RunID=?, @Arrive=?, @Depart=?, @Descr=?, @Type=?',
+                          (runID, arrvDate, dprtDate, bel_descr, bel_type))
+          belonging_index += 1
+          
+        # add each activity to db
+        activities = []
+        activity_index = 0
+        while f'activities[{activity_index}][type]' in request.form:
+          act_type = request.form.get(f'activities[{activity_index}][type]')
+          act_dates = request.form.getlist(f'activities[{activity_index}][dates]')
+          if act_dates is not None:
+            for act_date in act_dates:
+              cursor.execute('EXEC dbo.AddActivity @RunID=?, @Arrive=?, @Depart=?, @Date=?, @Type=?',
+                              (runID, arrvDate, dprtDate, act_date, act_type))
+          activity_index += 1
+
         flash(f'Visit added successfully! Assigned to run: {runName}', 'success')
       conn.commit()
       cursor.close()
