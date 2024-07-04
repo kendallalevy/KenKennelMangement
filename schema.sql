@@ -484,7 +484,7 @@ CREATE TABLE dbo.ACTIVITY
 	ActivityID int IDENTITY NOT NULL, 
 	ActivityTypeID int NOT NULL,
 	VisitID int NOT NULL,
-	ActivityDate DATE UNIQUE NOT NULL,
+	ActivityDate DATE NOT NULL,
     CONSTRAINT PK_activity PRIMARY KEY (ActivityID),
 	CONSTRAINT FK_activity_visit FOREIGN KEY (VisitID) REFERENCES dbo.VISIT (VisitID),
 	CONSTRAINT FK_activity_activityType FOREIGN KEY (ActivityTypeID) REFERENCES dbo.ACTIVITY_TYPE (ActivityTypeID)
@@ -742,8 +742,7 @@ VALUES
 	('Group', 'Play with other dogs'),
 	('Swim', 'Swim in pool with fitness coaches'),
 	('Massage', 'Massage by trained therapist'),
-	('Snuggle', 'Snuggle time with staff'),
-	('Groom', 'Baths and grooming');
+	('Snuggle', 'Snuggle time with staff');
 GO
 
 INSERT INTO dbo.ADDRESS_TYPE (AddressTypeName)

@@ -80,6 +80,75 @@ BEGIN
 END
 GO
 
+/*
+	Create function to get VisitID
+
+	Returns INT
+
+	Param:
+		@RunID = ID of the run
+		@Arrive = arrival date
+		@Depart = departure date
+
+*/
+CREATE FUNCTION F_Get_VisitID 
+(
+	-- Add the parameters for the function here
+	@RunID int,
+	@Arrive date,
+	@Depart date
+)
+RETURNS int
+AS
+BEGIN
+	DECLARE @VisitID INT = (SELECT VisitID FROM VISIT WHERE RunID = @RunID AND ArrivalDate = @Arrive AND DepartDate = @Depart);
+
+	-- Return the result of the function
+	RETURN @VisitID
+
+END
+GO
+
+/*
+	Create function to return if there are overlaps in a dog's new visit booking and already booked visits
+
+
+	Returns BIT
+
+	Param:
+		@DogID = ID of the dog to check
+		@Arrive = arrival date
+		@Depart = departure date
+
+*/
+CREATE FUNCTION F_Get_Overlap 
+(
+	-- Add the parameters for the function here
+	@DogID int,
+	@Arrive date,
+	@Depart date
+)
+RETURNS BIT
+AS
+BEGIN
+	DECLARE @Overlap BIT = 0
+	IF EXISTS(
+		SELECT VisitID FROM VISIT WHERE dogID = @DogID
+		AND (
+				(ArrivalDate BETWEEN @Arrive AND @Depart)
+				OR (DepartDate BETWEEN @Arrive AND @Depart)
+				OR (ArrivalDate <= @Arrive AND DepartDate >= @Arrive)
+			)
+	)
+		BEGIN
+			SET @Overlap = 1
+		END
+	-- Return the result of the function
+	RETURN @Overlap
+
+END
+GO
+
 
 /*
 	Create function to get available runs

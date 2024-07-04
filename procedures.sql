@@ -11,6 +11,8 @@
 ** 2	6/19/24		Kendall		Updated procedure to AddDog/AddCust to allow more information input. Added AddTag, AddVax, and AddMed
 ** 3	6/20/24		Kendall		Small bug fixes/formatting
 ** 4	6/27/24		Kendall		Added AddVisit
+** 5	7/02/24		Kendall		Added AddBelonging
+** 6	7/03/24		Kendall		Added AddActivity
 ******************************/
 use KenKennel;
 
@@ -513,14 +515,15 @@ CREATE PROCEDURE dbo.AddVisit
 
 AS
 	BEGIN
-		DECLARE @StatusID INT = (SELECT StatusID FROM VISIT_STATUS WHERE VisitStatus = @Status);
 
 		-- Check for null or invalid values in required parameters
 		IF @DogID IS NULL OR @Status IS NULL OR @Arrive IS NULL OR @Depart IS NULL
 		BEGIN
-			RAISERROR('One or more required parameters to add a med are not entered.', 16, 1)
+			RAISERROR('One or more required parameters to add a visit are not entered.', 16, 1)
 			RETURN
 		END
+
+		DECLARE @StatusID INT = (SELECT StatusID FROM VISIT_STATUS WHERE VisitStatus = @Status);
 
 		-- Check if the dog exists in the database
 		IF NOT EXISTS (
@@ -555,3 +558,149 @@ AS
 
 	END
 GO
+
+
+/*
+	Create stored procedure to add a belonging to a visit
+
+	Param:
+		@RunID = id of the run
+		@Arrive = date dog is scheduled to arrive
+		@Depart = date dog is scheduled to depart
+		@Descr = description of belonging
+		@Type = type of belonging selected from BELONGING_TYPE
+
+	Assumptions:
+		visit is booked for this run with these arrival/depart dates
+		Belonging type must exist
+
+*/
+-- Drop stored procedure if it already exists
+IF EXISTS (
+  SELECT * 
+    FROM INFORMATION_SCHEMA.ROUTINES 
+   WHERE SPECIFIC_SCHEMA = N'dbo'
+     AND SPECIFIC_NAME = N'AddBelonging' 
+)
+   DROP PROCEDURE dbo.AddBelonging
+GO
+
+CREATE PROCEDURE dbo.AddBelonging
+	@RunID int,
+	@Arrive date,
+	@Depart date,
+	@Descr varchar(50),
+	@Type varchar(50)
+
+AS
+	BEGIN
+
+		-- check if parameters are null
+		IF @RunID IS NULL OR @Descr IS NULL OR @Type IS NULL OR @Arrive IS NULL OR @Depart IS NULL
+		BEGIN
+			RAISERROR('One or more required parameters to add a belonging are not entered.', 16, 1)
+			RETURN
+		END
+
+		DECLARE @VisitID int = (SELECT dbo.F_Get_VisitID(@RunID, @Arrive, @Depart));
+
+		-- Check if the visit exists in the database
+		IF NOT EXISTS (
+			SELECT 1 FROM VISIT
+				WHERE VisitID = @VisitID
+		)
+		BEGIN
+			RAISERROR('The run is not booked for those dates.', 16, 1)
+			RETURN
+		END
+
+		DECLARE @TypeID int = (SELECT BelongingTypeID FROM BELONGING_TYPE WHERE BelongingTypeName = @Type);
+		-- check if belonging type exists
+		IF NOT EXISTS (
+			SELECT 1 FROM BELONGING_TYPE
+				WHERE BelongingTypeID = @TypeID
+		)
+		BEGIN
+			RAISERROR('The belonging type does not exist', 16, 1)
+			RETURN
+		END
+
+		-- Insert belonging into table
+		INSERT INTO dbo.BELONGING (VisitID, BelongingTypeID, BelongingDescr)
+		VALUES
+			(@VisitID, @TypeID, @Descr)
+	END
+GO
+
+/*
+	Create stored procedure to add an activity to a visit
+
+	Param:
+		@RunID = id of the run
+		@Arrive = date dog is scheduled to arrive
+		@Depart = date dog is scheduled to depart
+		@Date = date of the activity
+		@Type = type of activity selected from ACTIVITY_TYPE
+
+	Assumptions:
+		visit is booked for this run with these arrival/depart dates
+		Activity type must exist
+
+*/
+-- Drop stored procedure if it already exists
+IF EXISTS (
+  SELECT * 
+    FROM INFORMATION_SCHEMA.ROUTINES 
+   WHERE SPECIFIC_SCHEMA = N'dbo'
+     AND SPECIFIC_NAME = N'AddActivity' 
+)
+   DROP PROCEDURE dbo.AddActivity
+GO
+
+CREATE PROCEDURE dbo.AddActivity
+	@RunID int,
+	@Arrive date,
+	@Depart date,
+	@Date date,
+	@Type varchar(50)
+
+AS
+	BEGIN
+
+		-- check if parameters are null
+		IF @RunID IS NULL OR @Date IS NULL OR @Type IS NULL OR @Arrive IS NULL OR @Depart IS NULL
+		BEGIN
+			RAISERROR('One or more required parameters to add a belonging are not entered.', 16, 1)
+			RETURN
+		END
+
+		DECLARE @VisitID int = (SELECT dbo.F_Get_VisitID(@RunID, @Arrive, @Depart));
+
+		-- Check if the visit exists in the database
+		IF NOT EXISTS (
+			SELECT 1 FROM VISIT
+				WHERE VisitID = @VisitID
+		)
+		BEGIN
+			RAISERROR('The run is not booked for those dates.', 16, 1)
+			RETURN
+		END
+
+		DECLARE @TypeID int = (SELECT ActivityTypeID FROM ACTIVITY_TYPE WHERE ActivityTypeName = @Type);
+		-- check if belonging type exists
+		IF NOT EXISTS (
+			SELECT 1 FROM ACTIVITY_TYPE
+				WHERE ActivityTypeID = @TypeID
+		)
+		BEGIN
+			RAISERROR('The activity type does not exist', 16, 1)
+			RETURN
+		END
+
+		-- Insert belonging into table
+		INSERT INTO dbo.ACTIVITY (ActivityTypeID, VisitID, ActivityDate)
+		VALUES
+			(@TypeID, @VisitID, @Date)
+	END
+GO
+
